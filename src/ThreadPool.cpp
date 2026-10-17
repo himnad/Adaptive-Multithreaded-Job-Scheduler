@@ -84,24 +84,42 @@ void ThreadPool::enqueue(Job job) {
 Job ThreadPool::takeHighestPriorityJob() {
     const auto now = std::chrono::steady_clock::now();
 
-    auto effectivePriority = [&](const Job& job) {
+    auto calculateScore = [&](const Job& job) {
         const auto waitingTime =
             std::chrono::duration_cast<std::chrono::milliseconds>(
                 now - job.submittedAt
             ).count();
 
-        return static_cast<std::int64_t>(job.priority) +
-               waitingTime / agingInterval_.count();
+        std::int64_t score =
+            static_cast<std::int64_t>(job.priority) +
+            waitingTime / agingInterval_.count();
+
+        if (job.deadline.has_value()) {
+            const auto remaining =
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    job.deadline.value() - now
+                ).count();
+
+            if (remaining <= 0) {
+                score += 10;
+            } else if (remaining <= 200) {
+                score += 5;
+            } else if (remaining <= 1000) {
+                score += 2;
+            }
+        }
+
+        return score;
     };
 
     auto best = tasks_.begin();
 
     for (auto it = tasks_.begin() + 1; it != tasks_.end(); ++it) {
-        const auto currentPriority = effectivePriority(*it);
-        const auto bestPriority = effectivePriority(*best);
+        const auto currentScore = calculateScore(*it);
+        const auto bestScore = calculateScore(*best);
 
-        if (currentPriority > bestPriority ||
-            (currentPriority == bestPriority && it->id < best->id)) {
+        if (currentScore > bestScore ||
+            (currentScore == bestScore && it->id < best->id)) {
             best = it;
         }
     }

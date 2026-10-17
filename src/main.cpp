@@ -4,15 +4,11 @@
 #include <chrono>
 #include <future>
 #include <iostream>
-#include <mutex>
-#include <thread>
 
 int main() {
     using namespace std::chrono_literals;
 
-    std::mutex outputMutex;
-
-    ThreadPool pool(1, 200ms);
+    ThreadPool pool(1, 1000ms);
 
     std::promise<void> blockerStarted;
     std::promise<void> releaseBlocker;
@@ -34,24 +30,21 @@ int main() {
 
     pool.enqueue(Job{
         0,
-        Priority::Low,
-        [&] {
-            std::lock_guard<std::mutex> lock(outputMutex);
-            std::cout << "Low priority job executed\n";
+        Priority::High,
+        [] {
+            std::cout << "High priority job executed\n";
         },
         {}
     });
 
-    std::this_thread::sleep_for(650ms);
-
     pool.enqueue(Job{
         0,
-        Priority::High,
-        [&] {
-            std::lock_guard<std::mutex> lock(outputMutex);
-            std::cout << "High priority job executed\n";
+        Priority::Medium,
+        [] {
+            std::cout << "Urgent deadline job executed\n";
         },
-        {}
+        {},
+        std::chrono::steady_clock::now() + 150ms
     });
 
     releaseBlocker.set_value();

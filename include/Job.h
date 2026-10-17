@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cstdint>
 #include <functional>
+#include <optional>
 
 enum class Priority {
     Low = 1,
@@ -17,4 +18,7 @@ struct Job {
     std::function<void()> task;
 
     std::chrono::steady_clock::time_point submittedAt;
+
+    std::optional<std::chrono::steady_clock::time_point> deadline =
+        std::nullopt;
 };
