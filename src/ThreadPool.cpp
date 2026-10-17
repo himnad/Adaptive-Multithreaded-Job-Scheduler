@@ -81,8 +81,24 @@ void ThreadPool::enqueue(Job job) {
     condition_.notify_one();
 }
 
+std::chrono::milliseconds
+ThreadPool::getAdaptiveAgingInterval() const {
+    const std::size_t queueSize = tasks_.size();
+
+    if (queueSize >= 10) {
+        return std::chrono::milliseconds(200);
+    }
+
+    if (queueSize >= 5) {
+        return std::chrono::milliseconds(500);
+    }
+
+    return agingInterval_;
+}
+
 Job ThreadPool::takeHighestPriorityJob() {
     const auto now = std::chrono::steady_clock::now();
+    const auto adaptiveInterval = getAdaptiveAgingInterval();
 
     auto calculateScore = [&](const Job& job) {
         const auto waitingTime =
@@ -92,7 +108,7 @@ Job ThreadPool::takeHighestPriorityJob() {
 
         std::int64_t score =
             static_cast<std::int64_t>(job.priority) +
-            waitingTime / agingInterval_.count();
+            waitingTime / adaptiveInterval.count();
 
         if (job.deadline.has_value()) {
             const auto remaining =

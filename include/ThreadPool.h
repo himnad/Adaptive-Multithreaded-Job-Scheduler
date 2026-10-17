@@ -31,6 +31,8 @@ private:
 
     Job takeHighestPriorityJob();
 
+    std::chrono::milliseconds getAdaptiveAgingInterval() const;
+
     std::vector<std::thread> workers_;
     std::vector<Job> tasks_;
 
