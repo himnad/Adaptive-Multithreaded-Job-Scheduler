@@ -2,39 +2,59 @@
 #include "ThreadPool.h"
 
 #include <chrono>
+#include <future>
 #include <iostream>
 #include <mutex>
 #include <thread>
 
 int main() {
+    using namespace std::chrono_literals;
+
     std::mutex outputMutex;
 
-    {
-        ThreadPool pool(4);
+    ThreadPool pool(1, 200ms);
 
-        for (int i = 1; i <= 10; ++i) {
-            pool.enqueue([i, &outputMutex] {
-                {
-                    std::lock_guard<std::mutex> lock(outputMutex);
-                    std::cout << "Job " << i
-                              << " started by thread "
-                              << std::this_thread::get_id()
-                              << '\n';
-                }
+    std::promise<void> blockerStarted;
+    std::promise<void> releaseBlocker;
 
-                std::this_thread::sleep_for(
-                    std::chrono::milliseconds(1000)
-                );
+    auto started = blockerStarted.get_future();
+    auto release = releaseBlocker.get_future().share();
 
-                {
-                    std::lock_guard<std::mutex> lock(outputMutex);
-                    std::cout << "Job " << i
-                              << " completed\n";
-                }
-            });
-        }
-    }
+    pool.enqueue(Job{
+        0,
+        Priority::High,
+        [&] {
+            blockerStarted.set_value();
+            release.wait();
+        },
+        {}
+    });
 
-    std::cout << "All jobs completed!\n";
+    started.wait();
+
+    pool.enqueue(Job{
+        0,
+        Priority::Low,
+        [&] {
+            std::lock_guard<std::mutex> lock(outputMutex);
+            std::cout << "Low priority job executed\n";
+        },
+        {}
+    });
+
+    std::this_thread::sleep_for(650ms);
+
+    pool.enqueue(Job{
+        0,
+        Priority::High,
+        [&] {
+            std::lock_guard<std::mutex> lock(outputMutex);
+            std::cout << "High priority job executed\n";
+        },
+        {}
+    });
+
+    releaseBlocker.set_value();
+
     return 0;
 }
