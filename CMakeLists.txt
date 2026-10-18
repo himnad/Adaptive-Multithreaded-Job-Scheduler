@@ -62,3 +62,10 @@ if(BUILD_TESTING)
 
     gtest_discover_tests(scheduler_tests)
 endif()
+add_executable(scheduler_throughput
+    benchmarks/throughput.cpp
+)
+
+target_link_libraries(scheduler_throughput
+    PRIVATE scheduler_core
+)

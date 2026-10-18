@@ -19,7 +19,7 @@ struct BenchmarkResult {
 BenchmarkResult runBenchmark(SchedulingPolicy policy) {
     constexpr int totalJobs = 60;
 
-    ThreadPool pool(1, 1000ms);
+    ThreadPool pool(1, 1000ms, policy);
 
     std::atomic<int> remainingJobs{totalJobs};
     std::promise<void> allFinished;
