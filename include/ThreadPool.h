@@ -2,6 +2,7 @@
 #pragma once
 
 #include "Job.h"
+#include "SchedulerMetrics.h"
 
 #include <chrono>
 #include <condition_variable>
@@ -11,12 +12,20 @@
 #include <thread>
 #include <vector>
 
+enum class SchedulingPolicy {
+    FIFO,
+    FixedPriority,
+    AdaptivePriority
+};
+
 class ThreadPool {
 public:
     explicit ThreadPool(
         std::size_t threadCount,
         std::chrono::milliseconds agingInterval =
-            std::chrono::milliseconds(1000)
+            std::chrono::milliseconds(1000),
+        SchedulingPolicy policy =
+            SchedulingPolicy::AdaptivePriority
     );
 
     ~ThreadPool();
@@ -25,6 +34,8 @@ public:
     ThreadPool& operator=(const ThreadPool&) = delete;
 
     void enqueue(Job job);
+
+    MetricsSnapshot getMetrics() const;
 
 private:
     void workerLoop();
@@ -43,4 +54,7 @@ private:
     std::uint64_t nextJobId_ = 0;
 
     std::chrono::milliseconds agingInterval_;
+    SchedulingPolicy policy_;
+
+    SchedulerMetrics metrics_;
 };

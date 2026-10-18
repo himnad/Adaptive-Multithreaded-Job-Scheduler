@@ -16,3 +16,22 @@ target_include_directories(scheduler PRIVATE include)
 
 find_package(Threads REQUIRED)
 target_link_libraries(scheduler PRIVATE Threads::Threads)
+
+add_executable(scheduler_compare
+    benchmarks/compare.cpp
+    src/ThreadPool.cpp
+)
+
+target_include_directories(scheduler_compare PRIVATE include)
+
+target_link_libraries(scheduler_compare PRIVATE Threads::Threads)
+
+add_executable(scheduler_starvation
+    benchmarks/starvation.cpp
+    src/ThreadPool.cpp
+)
+
+target_include_directories(scheduler_starvation PRIVATE include)
+
+target_link_libraries(scheduler_starvation PRIVATE Threads::Threads)
+
